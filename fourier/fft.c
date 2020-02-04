@@ -55,19 +55,26 @@ backward(int rows, int cols, fftw_complex* freq_repr)
 void
 freq2spectra(int rows, int cols, fftw_complex* freq_repr, float* as, float* ps)
 {
-  (void)rows;
+  /*(void)rows;
   (void)cols;
   (void)freq_repr;
   (void)as;
-  (void)ps;
+  (void)ps;*/
+  for(int i=0;i<rows*cols;i++){
+    as[i] = cabs(freq_repr[i]);
+    ps[i] = carg(freq_repr[i]);
+  }
 }
 
 void
 spectra2freq(int rows, int cols, float* as, float* ps, fftw_complex* freq_repr)
 {
-  (void)rows;
+  /*(void)rows;
   (void)cols;
   (void)as;
   (void)ps;
-  (void)freq_repr;
+  (void)freq_repr;*/
+  for(int i = 0;i<rows*cols;i++)
+    freq_repr[i] = as[i] + ps[i]*_Complex_I;
 }
+
