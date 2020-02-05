@@ -15,23 +15,27 @@
 void
 test_forward_backward(char* name)
 {
-  fprintf(stderr, "test_forward_backward:");
+  fprintf(stderr, "test_forward_backward:\n");
   pnm ims = pnm_load(name);
-  unsigned short *data = pnm_get_image(ims);
-
+  
   int cols = pnm_get_width(ims);
   int rows = pnm_get_height(ims);
+
+  unsigned short *data = (unsigned short*) malloc(rows*cols*sizeof(unsigned short));
+  
+  pnm_get_channel(ims,data,0);
+  printf("%d %d %d\n",data[0],data[1],data[2]);
+  
+  
   fftw_complex* img_complex = forward(rows,cols,data);
+  
   data = backward(rows,cols,img_complex);
   char* newname = (char*) malloc(50* sizeof(char));
-  for ( int i = 0; i < rows; i++)
-  {
-    for (int j = 0; j < cols; j++)
-    {
-      pnm_set_component(ims,i,j,0,data[(i*cols)+j]);
-    }
-  }
   
+  pnm_set_channel(ims,data,0);
+  pnm_set_channel(ims,data,1);
+  pnm_set_channel(ims,data,2);
+  printf("%d %d %d\n",data[0],data[1],data[2]);
   sprintf(newname, "FB-%s.ppm",name);
   pnm_save(ims,PnmRawPpm,newname);
 
