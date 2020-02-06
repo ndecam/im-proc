@@ -20,16 +20,16 @@ test_forward_backward(char* name)
 {
   fprintf(stderr, "test_forward_backward:\n");
   pnm ims = pnm_load(name);
-  
+
   int cols = pnm_get_width(ims);
   int rows = pnm_get_height(ims);
   for(int channel = 0;channel <3;channel++){
     unsigned short *data = (unsigned short*) malloc(rows*cols*sizeof(unsigned short));
     pnm_get_channel(ims,data,channel);
-    
+
     fftw_complex* img_complex = forward(rows,cols,data);
     data = backward(rows,cols,img_complex);
-    
+
     pnm_set_channel(ims,data,channel);
     free(data);
   }
@@ -71,8 +71,8 @@ test_reconstruction(char* name)
     free(data);
   }
   char* newname = (char*) malloc(50* sizeof(char));
-  
-  sprintf(newname, "FB-ASPM-%s",name);
+
+  sprintf(newname, "FB-ASPS-%s",name);
   pnm_save(ims,PnmRawPpm,newname);
 
 
@@ -125,7 +125,7 @@ test_display(char* name)
       norm_ps[i] = ps[i];
     }
 
-    re_center(rows,cols,norm_as);
+    //re_center(rows,cols,norm_as);
     re_center(rows,cols,norm_ps);
 
     pnm_set_channel(ims,norm_as,channel);
@@ -133,7 +133,7 @@ test_display(char* name)
     free(data);
   }
   char* newname = (char*) malloc(50* sizeof(char));
-  
+
   sprintf(newname, "AS-%s",name);
   pnm_save(ims,PnmRawPpm,newname);
 
@@ -174,21 +174,40 @@ test_add_frequencies(char* name)
     float amax = 0;
     for(int i=0;i<rows*cols;i++)
       if(as[i] > amax) amax = as[i];
-    
-    //i est vertical
-    //j est horizontal
 
-    for(int i=0;i<rows;i++)
-      for(int j=0;j<cols;j++){
-        float sinx = 0.25 * amax * sinf(2*M_PI*i);
-        float siny = 0.25 * amax * sinf(2*M_PI*j);
-        as[(i*cols)+j] = as[(i*cols)+j] + sinx + siny;
-        norm_as[(i*cols)+j] = pow( as[i] / amax, k) * 255;
-      }
+    //Sens orthogonaux
+    as[0] = as[0] + (amax) - as[ 8 ]- as[(rows*cols) - 8]-as[8*cols]-as[ (rows-8)*cols];
+    as[ 8 ] += (0.25 * amax);
+    as[(rows*cols) - 8] += (0.25 *amax);
+    as[8*cols] += (0.25 *amax);
+    as[ (rows-8)*cols] += (0.25 * amax);
+
+    //Le milieu
     
-    re_center(rows,cols,norm_as);
+
+    //Les diagonales
+    /*
+    as[8+(8*cols)]+= (0.25 * amax);
+    as[(9*cols)-8] += (0.25 * amax);
+    as[(rows-8)*cols+8]+= (0.25 * amax);
+    as[(rows-7)*cols-8]+=(0.25*amax);*/
+    
+    float newmax = 0;
+
+    for(int i=0;i<rows*cols;i++)
+      if(as[i] > newmax) newmax = as[i];
+
+    for(int i=0;i<rows*cols;i++)
+      as[i] = (as[i]/ newmax)*amax; 
+
+    
+
+    for(int i=0;i<rows*cols;i++)
+      norm_as[i] = pow( as[i] / amax, k) * 255;
+
+    //re_center(rows,cols,norm_as);
     pnm_set_channel(ims2,norm_as,channel);
-    
+
 
     spectra2freq(rows,cols,as,ps,img_complex);
     data = backward(rows,cols,img_complex);
