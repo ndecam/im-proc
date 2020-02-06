@@ -44,9 +44,7 @@ backward(int rows, int cols, fftw_complex* freq_repr)
   unsigned short* g_img = (unsigned short*) malloc(rows*cols*sizeof(unsigned short));
 
   for(int cmp=0; cmp< rows*cols; cmp++ ){
-    //printf("%f\n",creal(struc_complex[cmp]) / 65353);
     g_img[cmp] = creal(struc_complex[cmp]) / (65535*4) ;
-    //printf("%d\n", g_img[cmp] );
   }
 
   free(struc_complex);
@@ -77,6 +75,5 @@ spectra2freq(int rows, int cols, float* as, float* ps, fftw_complex* freq_repr)
   (void)ps;
   (void)freq_repr;*/
   for(int i = 0;i<rows*cols;i++)
-    freq_repr[i] = as[i] + ps[i]*_Complex_I;
+    freq_repr[i] = as[i] * cexp(ps[i]*_Complex_I);
 }
-
