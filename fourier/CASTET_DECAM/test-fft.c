@@ -18,7 +18,7 @@
 void
 test_forward_backward(char* name)
 {
-  fprintf(stderr, "test_forward_backward:");
+  fprintf(stderr, "test_forward_backward:\n");
   pnm ims = pnm_load(name);
 
   int cols = pnm_get_width(ims);
@@ -181,6 +181,9 @@ test_add_frequencies(char* name)
     as[(rows*cols) - 8] += (0.25 *amax);
     as[8*cols] += (0.25 *amax);
     as[ (rows-8)*cols] += (0.25 * amax);
+
+    //Le milieu
+    
 
     float newmax = 0;
 

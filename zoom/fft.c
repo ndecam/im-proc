@@ -44,7 +44,19 @@ backward(int rows, int cols, fftw_complex* freq_repr)
   unsigned short* g_img = (unsigned short*) malloc(rows*cols*sizeof(unsigned short));
 
   for(int cmp=0; cmp< rows*cols; cmp++ ){
-    g_img[cmp] = creal(struc_complex[cmp]) / (rows*cols) ;
+    printf("%f\n", creal(struc_complex[cmp]));
+    
+    
+    g_img[cmp] = creal(struc_complex[cmp]) / (50*50);
+    if (creal(struc_complex[cmp]) / (50*50) > 255)
+    {
+      g_img[cmp]= 255; 
+    }
+    if (creal(struc_complex[cmp]) / (50*50) <0 )
+    {
+      g_img[cmp]= 0; 
+    }
+    printf("%d\n",g_img[cmp]);
   }
 
   free(struc_complex);
