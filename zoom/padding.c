@@ -2,27 +2,33 @@
 #include <stdio.h>
 #include <bcl.h>
 #include "fft.h"
+#include <math.h>
 
-void 
+void
 padding(int rows,int cols,int factor,fftw_complex* freq_repr,fftw_complex* freq_repr_with_padding){
-    printf("Image is of size %d*%d\n",rows,cols);
+    //printf("Image is of size %d*%d\n",rows,cols);
     int topleftcorner_row = ((rows*factor)-rows)/2;
     int topleftcorner_col = ((cols*factor)-cols)/2;
-    printf("Bigger image is of size %d*%d\n",rows*factor,cols*factor);
-    printf("Top-left corner is (%d,%d)\n",topleftcorner_row,topleftcorner_col);
-    for(int i=0;i<rows;i++)
+    //printf("Bigger image is of size %d*%d\n",rows*factor,cols*factor);
+    //printf("Top-left corner is (%d,%d)\n",topleftcorner_row,topleftcorner_col);
+    for(int i=0;i<rows;i++){
         for(int j=0;j<cols;j++){
-            printf("%d %d modifies index %d\n",i,j, (i+topleftcorner_row) * (cols*factor) + topleftcorner_col + j);
-            printf("It is supposed to be %d*%d\n",(i+topleftcorner_row),topleftcorner_col + j);
-            freq_repr_with_padding[ (i+topleftcorner_row) * (cols*factor) + topleftcorner_col + j ] = freq_repr[(i*cols)+j];
+            //printf("%d %d modifies index %d\n",i,j, (i+topleftcorner_row) * (cols*factor) + topleftcorner_col + j);
+            //printf("It is supposed to be %d*%d\n",(i+topleftcorner_row),topleftcorner_col + j);
+            int new_col = j+topleftcorner_col;
+            int new_row = i+topleftcorner_row;
+            freq_repr_with_padding[ (new_row*cols*factor) +  new_col] = freq_repr[(i*cols)+j];
         }
-    
-    /*for(int i=0;i<cols*factor;i++){
+    }
+    /*printf("%d,%d\n",topleftcorner_row,topleftcorner_col);
+    printf("2525 : %f\n",creal(freq_repr_with_padding[ 2525]));
+    for(int i=0;i<cols*factor;i++){
         printf("[");
         for(int j=0;j<rows*factor;j++)
-            printf("%f",creal(freq_repr_with_padding[(i*rows)+j]));
+            printf("%d ",(int)round(creal(freq_repr_with_padding[(i*cols*factor)+j])),(i*cols*factor)+j);
         printf("]\n");
-    }*/
+    }
+  */
 }
 
 void process(int factor, char* ims, char* imd){
@@ -33,7 +39,7 @@ void process(int factor, char* ims, char* imd){
 
     unsigned short *data = (unsigned short*) malloc(rows*cols*sizeof(unsigned short));
     unsigned short *returned_data = (unsigned short*) malloc(factor*rows*cols*factor*sizeof(unsigned short));
-    
+
     for(int channel = 0;channel <3;channel++){
         fftw_complex* padding_complex = (fftw_complex*)calloc(rows*cols*factor*factor,sizeof(fftw_complex));
 
@@ -41,11 +47,11 @@ void process(int factor, char* ims, char* imd){
         fftw_complex* img_complex = forward(rows,cols,data);
 
         padding(rows,cols,factor,img_complex,padding_complex);
-        printf("Padding done\n");
 
-        returned_data = backward(rows*factor,cols*factor,padding_complex);
-        /*for(int i =0;i<rows*cols;i++)
-            printf("%d\n",returned_data[i]);*/
+        returned_data = backward(rows*factor,cols*factor,factor,padding_complex);
+
+
+
         pnm_set_channel(imageimd,returned_data,channel);
         free(padding_complex);
     }
@@ -54,7 +60,7 @@ void process(int factor, char* ims, char* imd){
     pnm_save(imageimd,PnmRawPpm,imd);
 
 
-            
+
 }
 
 
