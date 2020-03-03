@@ -66,8 +66,58 @@ void lalphabeta_star(float* l,float* alpha, float* beta,float* means){
   *beta-=means[2];
 }
 
-//void lalphabeta_prime(float* l_star,float* alpha_star, float* beta_star,float* means)
+void lalphabeta_prime(float lstar,float alphastar,float betastar,float* sd_source,float* sd_target,float * lalphabetaprime){
+  lalphabetaprime[0] = (sd_target[0]/sd_source[0])*lstar;
+  lalphabetaprime[1] = (sd_target[1]/sd_source[1])*alphastar;
+  lalphabetaprime[2] = (sd_target[2]/sd_source[2])*betastar;
+}
 
+//void lalphabeta_prime(float* l_star,float* alpha_star, float* beta_star,float* means)
+void image_to_lalphabeta_data_points(pnm image,float lalphabeta_data_points[pnm_get_width(image)][pnm_get_height(image)][3]){
+  int cols = pnm_get_width(image);
+  int rows = pnm_get_height(image);
+  for(int i=0;i<rows;i++)
+    for(int j=0;j<cols;j++){
+      unsigned short R = pnm_get_component(image,i,j,0);
+      unsigned short G = pnm_get_component(image,i,j,1);
+      unsigned short B = pnm_get_component(image,i,j,2);
+      float LMS[3];
+      LMS_from_RGB(R,G,B,LMS);
+      float Lalphabeta[3];
+      Lalphabeta_from_LMS(LMS[0],LMS[1],LMS[2],Lalphabeta);
+      lalphabeta_data_points[i][j][0] = Lalphabeta[0];
+      lalphabeta_data_points[i][j][1] = Lalphabeta[1];
+      lalphabeta_data_points[i][j][2] = Lalphabeta[2];
+    }
+}
+
+void lalphabeta_data_points_to_image(pnm imageimd,float lalphabeta_data_points[pnm_get_width(imageimd)][pnm_get_height(imageimd)][3]){
+  int cols = pnm_get_width(imageimd);
+  int rows = pnm_get_height(imageimd);
+  for(int i=0;i<rows;i++)
+    for(int j=0;j<cols;j++){
+      float LMS[3];
+      LMS_from_lalphabeta(lalphabeta_data_points[i][j][0],lalphabeta_data_points[i][j][1],lalphabeta_data_points[i][j][2],LMS);
+      unsigned short RGB[3];
+      RGB_from_LMS(LMS[0],LMS[1],LMS[2],RGB);
+      pnm_set_component(imageimd,i,j,0,RGB[0]);
+      pnm_set_component(imageimd,i,j,1,RGB[1]);
+      pnm_set_component(imageimd,i,j,2,RGB[2]);
+    }
+}
+
+void lalphabeta_image_mean_standard_deviation(int rows,int cols,float lalphabeta_data_points[rows][cols][3],float* mean,float* standard_deviation){
+  for(int i=0;i<rows;i++)
+    for(int j=0;j<cols;j++)
+      for(int channel = 0;channel<3;channel++)
+        mean[channel] += lalphabeta_data_points[i][j][channel]/(rows*cols);
+  
+  for(int i=0;i<rows;i++)
+    for(int j=0;j<cols;j++)
+      for(int channel = 0;channel<3;channel++)
+        standard_deviation[channel] += (lalphabeta_data_points[i][j][channel]-mean[channel])/(rows*cols);
+    
+}
 
 
 
@@ -77,24 +127,26 @@ process(char *ims, char *imt, char* imd){
   int cols = pnm_get_width(imageims);
   int rows = pnm_get_height(imageims);
   pnm imageimd = pnm_new(cols, rows, PnmRawPpm);
+
+  pnm imageimt = pnm_load(imt);
+  int cols_imt = pnm_get_width(imageimt);
+  int rows_imt = pnm_get_height(imageimt);
   
-  for(int i=0;i<rows;i++)
-    for(int j=0;j<cols;j++){
-      unsigned short R = pnm_get_component(imageims,i,j,0);
-      unsigned short G = pnm_get_component(imageims,i,j,1);
-      unsigned short B = pnm_get_component(imageims,i,j,2);
-      float LMS[3];
-      LMS_from_RGB(R,G,B,LMS);
-      float Lalphabeta[3];
-      Lalphabeta_from_LMS(LMS[0],LMS[1],LMS[2],Lalphabeta);
-      LMS_from_lalphabeta(Lalphabeta[0],Lalphabeta[1],Lalphabeta[2],LMS);
-      unsigned short RGB[3];
-      RGB_from_LMS(LMS[0],LMS[1],LMS[2],RGB);
-      printf("%d %d %d\n",RGB[0],RGB[1],RGB[2]);
-      pnm_set_component(imageimd,i,j,0,RGB[0]);
-      pnm_set_component(imageimd,i,j,1,RGB[1]);
-      pnm_set_component(imageimd,i,j,2,RGB[2]);
-    }
+
+  float lalphabeta_source[rows][cols][3];
+  float lalphabeta_target[rows_imt][cols_imt][3];
+  image_to_lalphabeta_data_points(imageims,lalphabeta_source);
+  image_to_lalphabeta_data_points(imageimt,lalphabeta_target);
+
+  float sd_source[3];
+  float mean_source[3];
+  float sd_target[3];
+  float mean_target[3];
+
+  lalphabeta_image_mean_standard_deviation(rows,cols,lalphabeta_source,mean_source,sd_source);
+  lalphabeta_image_mean_standard_deviation(rows_imt,cols_imt,lalphabeta_target,mean_target,sd_target);
+
+  lalphabeta_data_points_to_image(imageimd,lalphabeta_source);
   pnm_save(imageimd,PnmRawPpm,imd);
 }
 
