@@ -128,9 +128,6 @@ void lalphabeta_image_mean_standard_deviation(int rows,int cols,double*** lalpha
   for(int channel = 0;channel<3;channel++)
     mean[channel]/=(rows*cols);
   
-  for(int channel = 0;channel<3;channel++)
-    printf("%f\n",mean[channel]);
-  printf("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAa\n");
   for(int i=0;i<rows;i++)
     for(int j=0;j<cols;j++)
       for(int channel = 0;channel<3;channel++)
