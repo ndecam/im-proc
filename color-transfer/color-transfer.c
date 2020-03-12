@@ -1,9 +1,9 @@
 /**
  * @file color-transfert
  * @brief transfert color from source image to target image.
- *        Method from Reinhard et al. : 
- *        Erik Reinhard, Michael Ashikhmin, Bruce Gooch and Peter Shirley, 
- *        'Color Transfer between Images', IEEE CGA special issue on 
+ *        Method from Reinhard et al. :
+ *        Erik Reinhard, Michael Ashikhmin, Bruce Gooch and Peter Shirley,
+ *        'Color Transfer between Images', IEEE CGA special issue on
  *        Applied Perception, Vol 21, No 5, pp 34-41, September - October 2001
  */
 
@@ -17,8 +17,8 @@
 #define D 3
 
 double RGB2LMS[D][D] = {
-  {0.3811, 0.5783, 0.0402}, 
-  {0.1967, 0.7244, 0.0782},  
+  {0.3811, 0.5783, 0.0402},
+  {0.1967, 0.7244, 0.0782},
   {0.0241, 0.1288, 0.8444}
 };
 
@@ -78,10 +78,8 @@ void lalphabeta_prime(double lstar,double alphastar,double betastar,double* sd_s
 
 //void lalphabeta_prime(double* l_star,double* alpha_star, double* beta_star,double* means)
 void image_to_lalphabeta_data_points(pnm image,double*** lalphabeta_data_points){
-  printf("Entered!\n");
   int cols = pnm_get_width(image);
   int rows = pnm_get_height(image);
-  printf("Rows:%d,cols:%d\n",rows,cols);
   for(int i=0;i<rows;i++)
     for(int j=0;j<cols;j++){
       unsigned short R = pnm_get_component(image,i,j,0);
@@ -100,7 +98,6 @@ void image_to_lalphabeta_data_points(pnm image,double*** lalphabeta_data_points)
 void lalphabeta_data_points_to_image(pnm imageimd,double*** lalphabeta_data_points){
   int cols = pnm_get_width(imageimd);
   int rows = pnm_get_height(imageimd);
-  printf("Rows:%d,cols:%d\n",rows,cols);
 
   for(int i=0;i<rows;i++)
     for(int j=0;j<cols;j++){
@@ -121,26 +118,20 @@ void lalphabeta_image_mean_standard_deviation(int rows,int cols,double*** lalpha
         mean[channel] += lalphabeta_data_points[i][j][channel];
         //printf("%d %d\n",i,j);
         if(!isfinite(mean[channel]) || mean[channel]==NAN){
-          printf("%d %d %f\n",i,j,lalphabeta_data_points[i][j][channel]);
           exit(EXIT_FAILURE);
         }
       }
   for(int channel = 0;channel<3;channel++)
     mean[channel]/=(rows*cols);
-  
-  for(int channel = 0;channel<3;channel++)
-    printf("%f\n",mean[channel]);
-  printf("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAa\n");
+
   for(int i=0;i<rows;i++)
     for(int j=0;j<cols;j++)
       for(int channel = 0;channel<3;channel++)
         standard_deviation[channel] += pow(lalphabeta_data_points[i][j][channel] - mean[channel], 2);
-  
   for(int channel = 0;channel<3;channel++){
     standard_deviation[channel]/=(rows*cols);
     standard_deviation[channel] = sqrt(standard_deviation[channel]);
   }
-    
 }
 //applies colors from the target image in lalphabeta form on source.
 void apply_color_transfer(double*** lalphabeta_data_points_source,int rows,int cols,double*** lalphabeta_data_points_target,int rows_imt,int cols_imt){
@@ -152,9 +143,6 @@ void apply_color_transfer(double*** lalphabeta_data_points_source,int rows,int c
   lalphabeta_image_mean_standard_deviation(rows,cols,lalphabeta_data_points_source,mean_source,sd_source);
   lalphabeta_image_mean_standard_deviation(rows_imt,cols_imt,lalphabeta_data_points_target,mean_target,sd_target);
 
-  for(int t=0;t<3;t++){
-    printf("%f %f\n",sd_source[t],mean_source[t]);
-  }
   for(int i=0;i<rows;i++)
     for(int j=0;j<cols;j++)
       for(int channel=0;channel<3;channel++){
@@ -177,6 +165,28 @@ double*** malloc_3dim_array(int x,int y,int z){
   return array;
 }
 
+void stretch(pnm imageimd, int rows, int cols){
+  for(int channel = 0; channel <3; channel++){
+    float min = 255;
+    float max = 0;
+    float k;
+    for(int i = 0; i < rows;i++){
+      for(int j =0; j < cols; j++){
+        k = pnm_get_component(imageimd,i,j,channel);
+        if(k < min) min = k;
+        if(k > max) max = k;
+      }
+    }
+
+    for(int i = 0; i < rows;i++){
+      for(int j =0; j < cols; j++){
+        //printf("pour min = %f et max = %f et component = %d k = %f\n",min,max,pnm_get_component(imageimd,i,j,channel),(pnm_get_component(imageimd,i,j,channel)/(max-min))*255 - min );
+        pnm_set_component(imageimd,i,j,channel,
+          (pnm_get_component(imageimd,i,j,channel)/(max-min))*255 - min);
+      }
+    }
+  }
+}
 
 void
 process(char *ims, char *imt, char* imd){
@@ -187,20 +197,20 @@ process(char *ims, char *imt, char* imd){
   int cols_imt = pnm_get_width(imageimt);
   int rows_imt = pnm_get_height(imageimt);
   pnm imageimd = pnm_new(cols_imt, rows_imt, PnmRawPpm);
-  
-  
-  
-  printf("Rows:%d,cols:%d\n",rows,cols);
+
+
+
   double*** lalphabeta_source=malloc_3dim_array(rows,cols,3);
   double*** lalphabeta_target=malloc_3dim_array(rows_imt,cols_imt,3);
-  
+
   image_to_lalphabeta_data_points(imageims,lalphabeta_source);
   image_to_lalphabeta_data_points(imageimt,lalphabeta_target);
 
-  
+
   apply_color_transfer(lalphabeta_target,rows_imt,cols_imt,lalphabeta_source,rows,cols);
 
   lalphabeta_data_points_to_image(imageimd,lalphabeta_target);
+  stretch(imageimd,rows_imt,cols_imt);
   pnm_save(imageimd,PnmRawPpm,imd);
 
 }
