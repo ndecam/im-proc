@@ -31,16 +31,15 @@ double LMS2RGB[D][D] = {
 
 void LMS_from_RGB(double R,double G,double B,double* LMS){
   if(R ==0.0 && G==0.0 && B==0.0){
-    R=1;
-    G=1;
-    B=1;
+    R=0.0001;
+    G=0.0001;
+    B=0.0001;
   }
   LMS[0] = log10(R*RGB2LMS[0][0] + G*RGB2LMS[0][1] + B*RGB2LMS[0][2]);
   LMS[1] = log10(R*RGB2LMS[1][0] + G*RGB2LMS[1][1] + B*RGB2LMS[1][2]);
   LMS[2] = log10(R*RGB2LMS[2][0] + G*RGB2LMS[2][1] + B*RGB2LMS[2][2]);
 }
 
-//matrixes multiplication might be wrong, recheck that later if it doesn't work
 void Lalphabeta_from_LMS(double L,double M,double S,double* lalphabeta){
   lalphabeta[0] = L*0.57735026919	+ M *0.57735026919 + S *0.57735026919;
   lalphabeta[1] = L*0.40824829046 + M *0.40824829046 + S *-0.81649658092;
@@ -57,24 +56,9 @@ void RGB_from_LMS(double L,double M,double S, unsigned short* RGB){
   RGB[0] = L*LMS2RGB[0][0] + M*LMS2RGB[0][1] + S*LMS2RGB[0][2];
   RGB[1] = L*LMS2RGB[1][0] + M*LMS2RGB[1][1] + S*LMS2RGB[1][2];
   RGB[2] = L*LMS2RGB[2][0] + M*LMS2RGB[2][1] + S*LMS2RGB[2][2];
-  if(RGB[0]>255) RGB[0]=255;
-  if(RGB[1]>255) RGB[1]=255;
-  if(RGB[2]>255) RGB[2]=255;
-
-
 }
 
-void lalphabeta_star(double* l,double* alpha, double* beta,double* means){
-  *l-=-means[0];
-  *alpha-=means[1];
-  *beta-=means[2];
-}
 
-void lalphabeta_prime(double lstar,double alphastar,double betastar,double* sd_source,double* sd_target,double * lalphabetaprime){
-  lalphabetaprime[0] = (sd_target[0]/sd_source[0])*lstar;
-  lalphabetaprime[1] = (sd_target[1]/sd_source[1])*alphastar;
-  lalphabetaprime[2] = (sd_target[2]/sd_source[2])*betastar;
-}
 
 //void lalphabeta_prime(double* l_star,double* alpha_star, double* beta_star,double* means)
 void image_to_lalphabeta_data_points(pnm image,double*** lalphabeta_data_points){
@@ -100,8 +84,6 @@ void image_to_lalphabeta_data_points(pnm image,double*** lalphabeta_data_points)
 void lalphabeta_data_points_to_image(pnm imageimd,double*** lalphabeta_data_points){
   int cols = pnm_get_width(imageimd);
   int rows = pnm_get_height(imageimd);
-  printf("Rows:%d,cols:%d\n",rows,cols);
-
   for(int i=0;i<rows;i++)
     for(int j=0;j<cols;j++){
       double LMS[3];
@@ -119,11 +101,6 @@ void lalphabeta_image_mean_standard_deviation(int rows,int cols,double*** lalpha
     for(int j=0;j<cols;j++)
       for(int channel = 0;channel<3;channel++){
         mean[channel] += lalphabeta_data_points[i][j][channel];
-        //printf("%d %d\n",i,j);
-        if(!isfinite(mean[channel]) || mean[channel]==NAN){
-          printf("%d %d %f\n",i,j,lalphabeta_data_points[i][j][channel]);
-          exit(EXIT_FAILURE);
-        }
       }
   for(int channel = 0;channel<3;channel++)
     mean[channel]/=(rows*cols);
@@ -134,7 +111,7 @@ void lalphabeta_image_mean_standard_deviation(int rows,int cols,double*** lalpha
         standard_deviation[channel] += pow(lalphabeta_data_points[i][j][channel] - mean[channel], 2);
   
   for(int channel = 0;channel<3;channel++){
-    standard_deviation[channel]/=(rows*cols);
+    standard_deviation[channel]/=(double)(rows*cols);
     standard_deviation[channel] = sqrt(standard_deviation[channel]);
   }
     
@@ -149,9 +126,6 @@ void apply_color_transfer(double*** lalphabeta_data_points_source,int rows,int c
   lalphabeta_image_mean_standard_deviation(rows,cols,lalphabeta_data_points_source,mean_source,sd_source);
   lalphabeta_image_mean_standard_deviation(rows_imt,cols_imt,lalphabeta_data_points_target,mean_target,sd_target);
 
-  for(int t=0;t<3;t++){
-    printf("%f %f\n",sd_source[t],mean_source[t]);
-  }
   for(int i=0;i<rows;i++)
     for(int j=0;j<cols;j++)
       for(int channel=0;channel<3;channel++){
