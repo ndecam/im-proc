@@ -125,7 +125,7 @@ test_display(char* name)
       norm_ps[i] = ps[i];
     }
 
-    re_center(rows,cols,norm_as);
+    //re_center(rows,cols,norm_as);
     re_center(rows,cols,norm_ps);
 
     pnm_set_channel(ims,norm_as,channel);
@@ -144,12 +144,58 @@ test_display(char* name)
   fprintf(stderr, "OK\n");
   free(newname);
 }
+
+unsigned short* sinusoide_cheloue(int rows,int cols){
+  pnm ims = pnm_new(cols,rows,PnmRawPpm);
+  unsigned short *data = (unsigned short*) malloc(rows*cols*sizeof(unsigned short));
+  //float k = 0.2;
+  for ( int channel = 0; channel < 3; channel++){
+    
+  
+    pnm_get_channel(ims,data,channel);
+    for ( int i = 0; i < rows; i++)
+      for (int j =0; j < cols; j++){
+        double sinx = sinf(M_PI*i*(16.0/rows));
+        double siny = sinf(M_PI*j*(16.0/cols));
+        double val = (sinx+siny+2) * (255.0/2) * 0.25;
+        data[(i*cols) + j] = val;
+        printf("%d\n",data[(i*cols) + j]);
+      }
+    
+    pnm_set_channel(ims,data,channel);
+  }
+  pnm_save(ims,PnmRawPpm,"Sinusoide");
+  test_display("Sinusoide");
+
+  /*pnm ims = pnm_new(cols,rows,PnmRawPpm);
+  unsigned short *data = (unsigned short*) malloc(rows*cols*sizeof(unsigned short));
+
+  for ( int channel = 0; channel < 3; channel++){
+    pnm_get_channel(ims,data,channel);
+    for ( int i = 0; i < rows; i++)
+      for (int j =0; j < cols; j++){
+        double sinx = sinf(M_PI*i*(16.0/rows));
+        double siny = sinf(M_PI*j*(16.0/cols));
+        double val = (sinx+siny+2) * (255.0/2) * 0.25;
+        data[(i*cols) + j] = val;
+        printf("%d\n",data[(i*cols) + j]);
+      }
+    
+    pnm_set_channel(ims,data,channel);
+  }
+  */
+  return data;
+  //free(data);
+}
+
 /**
  * @brief test the modification of magnitude by adding a periodic functions
           on both vertical and horizontal axis, and
  *        construct output images
  * @param char* name, the input image file name
  */
+
+
 void
 
 test_add_frequencies(char* name)
@@ -157,8 +203,11 @@ test_add_frequencies(char* name)
   fprintf(stderr, "test_add_frequencies: ");
   pnm ims = pnm_load(name);
   pnm ims2 = pnm_load(name);
+  
   int cols = pnm_get_width(ims);
   int rows = pnm_get_height(ims);
+  //sinusoide_cheloue(rows,cols);
+  //return;
   float k = 0.2;
   for(int channel = 0;channel <3;channel++){
     unsigned short *data = (unsigned short*) malloc(rows*cols*sizeof(unsigned short));
@@ -180,28 +229,31 @@ test_add_frequencies(char* name)
 
     for(int i=0;i<rows;i++)
       for(int j=0;j<cols;j++){
-        float sinx = 0.25 * amax * sinf(2*M_PI*i);
-        float siny = 0.25 * amax * sinf(2*M_PI*j);
-        as[(i*cols)+j] = as[(i*cols)+j] + sinx + siny;
-        norm_as[(i*cols)+j] = pow( as[i] / amax, k) * 255;
+        /*float sinx = 0.25 * amax * sinf(2*M_PI*i);
+        float siny = 0.25 * amax * sinf(2*M_PI*j);*/
+        double sinx = 0.25*amax * sinf(M_PI*i*(16.0/rows));
+        double siny = 0.25*amax * sinf(M_PI*j*(16.0/cols));
+        double val = sinx+siny;
+        as[(i*cols)+j] = as[(i*cols)+j] + val;
+        printf("%f\n",as[(i*cols)+j]);
+        norm_as[(i*cols)+j] = pow( as[(i*cols)+j] / amax, k) * 255;
       }
     
     re_center(rows,cols,norm_as);
-    pnm_set_channel(ims2,norm_as,channel);
     
-
+    pnm_set_channel(ims,norm_as,channel);
     spectra2freq(rows,cols,as,ps,img_complex);
     data = backward(rows,cols,img_complex);
 
-    pnm_set_channel(ims,data,channel);
+    pnm_set_channel(ims2,data,channel);
     free(data);
   }
 
   char* newname = (char*) malloc(50* sizeof(char));
-  sprintf(newname, "FREQ-%s",name);
+  sprintf(newname, "FAS-%s",name);
   pnm_save(ims,PnmRawPpm,newname);
 
-  sprintf(newname, "FAS-%s",name);
+  sprintf(newname, "FREQ-%s",name);
   pnm_save(ims2,PnmRawPpm,newname);
 
   (void)name;
@@ -225,6 +277,7 @@ usage(const char *s)
   fprintf(stderr, "Usage: %s <ims> \n", s);
   exit(EXIT_FAILURE);
 }
+
 
 #define PARAM 1
 int
