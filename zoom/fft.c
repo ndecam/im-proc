@@ -16,6 +16,10 @@ forward(int rows, int cols, unsigned short* g_img)
   for(int cmp=0; cmp< rows*cols; cmp++ ){
     img_complex[cmp] = (double)g_img[cmp];
   }
+  for(int i=0;i<rows;i++)
+    for(int y=0;y<cols;y++)
+      img_complex[i*cols+y] = img_complex[i*cols+y]*pow(-1,i+y);
+
 
   fftw_complex* struc_complex = (fftw_complex*) malloc(rows*cols*sizeof(fftw_complex));
 
@@ -27,7 +31,7 @@ forward(int rows, int cols, unsigned short* g_img)
 }
 
 unsigned short *
-backward(int rows, int cols, fftw_complex* freq_repr)
+backward(int rows, int cols, int factor,fftw_complex* freq_repr)
 {
   /*
   unsigned short* g_img = (unsigned short) malloc(rows*cols*sizeoff(unsigned short));
@@ -43,8 +47,13 @@ backward(int rows, int cols, fftw_complex* freq_repr)
 
   unsigned short* g_img = (unsigned short*) malloc(rows*cols*sizeof(unsigned short));
 
+
   for(int cmp=0; cmp< rows*cols; cmp++ ){
-    g_img[cmp] = creal(struc_complex[cmp]) / (rows*cols) ;
+    float result =  (creal(struc_complex[cmp])) / ((rows/factor)*(cols/factor));
+    result = result*pow(-1,rows+cols);
+    if(result>255) result = 255;
+    if(result<0) result = 0;
+    g_img[cmp] = result;
   }
 
   free(struc_complex);

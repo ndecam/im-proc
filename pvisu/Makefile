@@ -7,7 +7,7 @@
 ## (2017) Modified by Vinh
 ##
 CPPFLAGS=-Isrc/pandore -DNDEBUG -O3
-CXXFLAGS=-Wall -Wextra -Werror -Wpointer-arith -Wwrite-strings -Wcast-qual  -Wformat-security -Wmissing-format-attribute -Wno-overloaded-virtual -s -fpic
+CXXFLAGS=-Wall -Wextra -Wpointer-arith -Wwrite-strings -Wcast-qual  -Wformat-security -Wmissing-format-attribute -Wno-overloaded-virtual -s -fpic
 LDFLAGS=-shared
 LDLIBS= 
 
@@ -28,7 +28,7 @@ $(LIB): $(OBJ)
 	 $(CXX) -o $@ $(LDFLAGS) $^
 
 $(PVISU):
-	cd src/pvisu && qmake-qt4 pvisu.pro && $(MAKE)
+	cd src/pvisu && qmake pvisu.pro && $(MAKE)
 
 .PHONY: clean cleanall distclean usage
 clean:

@@ -1,12 +1,3 @@
-/**
- * @file color-transfert
- * @brief transfert color from source image to target image.
- *        Method from Reinhard et al. :
- *        Erik Reinhard, Michael Ashikhmin, Bruce Gooch and Peter Shirley,
- *        'Color Transfer between Images', IEEE CGA special issue on
- *        Applied Perception, Vol 21, No 5, pp 34-41, September - October 2001
- */
-
 #include <float.h>
 #include <math.h>
 #include <stdio.h>
@@ -17,8 +8,8 @@
 #define D 3
 
 double RGB2LMS[D][D] = {
-  {0.3811, 0.5783, 0.0402},
-  {0.1967, 0.7244, 0.0782},
+  {0.3811, 0.5783, 0.0402}, 
+  {0.1967, 0.7244, 0.0782},  
   {0.0241, 0.1288, 0.8444}
 };
 
@@ -62,8 +53,10 @@ void RGB_from_LMS(double L,double M,double S, unsigned short* RGB){
 
 //void lalphabeta_prime(double* l_star,double* alpha_star, double* beta_star,double* means)
 void image_to_lalphabeta_data_points(pnm image,double*** lalphabeta_data_points){
+  printf("Entered!\n");
   int cols = pnm_get_width(image);
   int rows = pnm_get_height(image);
+  printf("Rows:%d,cols:%d\n",rows,cols);
   for(int i=0;i<rows;i++)
     for(int j=0;j<cols;j++){
       unsigned short R = pnm_get_component(image,i,j,0);
@@ -82,10 +75,6 @@ void image_to_lalphabeta_data_points(pnm image,double*** lalphabeta_data_points)
 void lalphabeta_data_points_to_image(pnm imageimd,double*** lalphabeta_data_points){
   int cols = pnm_get_width(imageimd);
   int rows = pnm_get_height(imageimd);
-<<<<<<< HEAD
-=======
-
->>>>>>> 96ebf44b1211c3b9faf12c09502d182d798607ec
   for(int i=0;i<rows;i++)
     for(int j=0;j<cols;j++){
       double LMS[3];
@@ -97,44 +86,6 @@ void lalphabeta_data_points_to_image(pnm imageimd,double*** lalphabeta_data_poin
       pnm_set_component(imageimd,i,j,2,RGB[2]);
     }
 }
-
-void lalphabeta_image_mean_standard_deviation(int rows,int cols,double*** lalphabeta_data_points,double* mean,double* standard_deviation){
-  for(int i=0;i<rows;i++)
-    for(int j=0;j<cols;j++)
-      for(int channel = 0;channel<3;channel++){
-        mean[channel] += lalphabeta_data_points[i][j][channel];
-      }
-  for(int channel = 0;channel<3;channel++)
-    mean[channel]/=(rows*cols);
-  for(int i=0;i<rows;i++)
-    for(int j=0;j<cols;j++)
-      for(int channel = 0;channel<3;channel++)
-        standard_deviation[channel] += pow(lalphabeta_data_points[i][j][channel] - mean[channel], 2);
-  for(int channel = 0;channel<3;channel++){
-    standard_deviation[channel]/=(double)(rows*cols);
-    standard_deviation[channel] = sqrt(standard_deviation[channel]);
-  }
-}
-//applies colors from the target image in lalphabeta form on source.
-void apply_color_transfer(double*** lalphabeta_data_points_source,int rows,int cols,double*** lalphabeta_data_points_target,int rows_imt,int cols_imt){
-  double sd_source[3] = {0.0,0.0,0.0};
-  double mean_source[3] =  {0.0,0.0,0.0};
-  double sd_target[3] =  {0.0,0.0,0.0};
-  double mean_target[3] =  {0.0,0.0,0.0};
-
-  lalphabeta_image_mean_standard_deviation(rows,cols,lalphabeta_data_points_source,mean_source,sd_source);
-  lalphabeta_image_mean_standard_deviation(rows_imt,cols_imt,lalphabeta_data_points_target,mean_target,sd_target);
-
-  for(int i=0;i<rows;i++)
-    for(int j=0;j<cols;j++)
-      for(int channel=0;channel<3;channel++){
-        lalphabeta_data_points_source[i][j][channel]-=mean_source[channel];
-        lalphabeta_data_points_source[i][j][channel]*=(sd_target[channel]/sd_source[channel]);
-        lalphabeta_data_points_source[i][j][channel]+=mean_target[channel];
-      }
-
-}
-
 double*** malloc_3dim_array(int x,int y,int z){
   double *** array = (double ***)malloc(x*sizeof(double**));
 
@@ -147,28 +98,74 @@ double*** malloc_3dim_array(int x,int y,int z){
   return array;
 }
 
-void stretch(pnm imageimd, int rows, int cols){
-  for(int channel = 0; channel <3; channel++){
-    float min = 255;
-    float max = 0;
-    float k;
-    for(int i = 0; i < rows;i++){
-      for(int j =0; j < cols; j++){
-        k = pnm_get_component(imageimd,i,j,channel);
-        if(k < min) min = k;
-        if(k > max) max = k;
-      }
+int** malloc_2dim_array(int x,int y){
+  int ** array = (int **)malloc(x*sizeof(int*));
+
+  for (int i = 0; i< x; i++) {
+    array[i] = (int *) malloc(y*sizeof(int *));
+  }
+  return array;
+}
+
+void neighborhood_preprocessing(double*** lalphabeta_data_points, double*** luminance_mean_sd, int rows, int cols){
+    int patch_size = 5;
+    for(int i=0;i<rows;i++)
+        for(int j=0;j<cols;j++)
+            for(int patched_i=i-(patch_size/2);patched_i<i+(patch_size/2+1);patched_i++)
+                for(int patched_j=j-(patch_size/2);patched_j<j+(patch_size/2+1);patched_j++)
+                    if(patched_i>0 && patched_i<rows && patched_j>0 && patched_j<cols)
+                        luminance_mean_sd[i][j][0]+=(lalphabeta_data_points[patched_i][patched_j][0]/(patch_size*patch_size));
+                
+
+    
+    for(int i=0;i<rows;i++)
+        for(int j=0;j<cols;j++){
+            for(int patched_i=i-(patch_size/2);patched_i<i+(patch_size/2+1);patched_i++)
+                for(int patched_j=j-(patch_size/2);patched_j<j+(patch_size/2+1);patched_j++)
+                    if(patched_i>0 && patched_i<rows && patched_j>0 && patched_j<cols)
+                        luminance_mean_sd[i][j][1] += pow(lalphabeta_data_points[patched_i][patched_j][0] - luminance_mean_sd[i][j][0], 2);
+        luminance_mean_sd[i][j][1]/=(double)(patch_size*patch_size);
+        luminance_mean_sd[i][j][1] = sqrt(luminance_mean_sd[i][j][1]);
+        }
+    
+}
+void select_best_swatch(int** random_swatches,double*** neighborhood_source, double* neighborhood_target,int* swatch_row,int* swatch_col){
+    
+    double best_result = (neighborhood_target[0]-neighborhood_source[0][0][0])+(neighborhood_target[1]-neighborhood_source[0][0][1]);
+    for(int swatch=0;swatch<200;swatch++){
+        int swatch_row_t = random_swatches[swatch][0];
+        int swatch_col_t = random_swatches[swatch][1];
+        int neighborhood_comparison = (neighborhood_target[0]-neighborhood_source[swatch_row_t][swatch_col_t][0])+(neighborhood_target[1]-neighborhood_source[swatch_row_t][swatch_col_t][1]);
+        if(   neighborhood_comparison < best_result){
+            *swatch_row=swatch_row_t;
+            *swatch_col=swatch_col_t;
+            best_result = neighborhood_comparison;
+        }
+    }
+}
+
+void 
+apply_colorization(double*** lalphabeta_source,double*** neighborhood_source,int rows,int cols, double*** lalphabeta_target,double*** neighborhood_target,int rows_imt,int cols_imt){
+    int** random_swatches = malloc_2dim_array(200,2) ;
+    for(int swatch = 0;swatch<200;swatch++){
+        int row = rand()%rows;
+        int col = rand()%cols;
+        random_swatches[swatch][0] = row;
+        random_swatches[swatch][1] = col;
+        printf("%d %d\n",row,col);
     }
 
-    for(int i = 0; i < rows;i++){
-      for(int j =0; j < cols; j++){
-        //printf("pour min = %f et max = %f et component = %d k = %f\n",min,max,pnm_get_component(imageimd,i,j,channel),(pnm_get_component(imageimd,i,j,channel)/(max-min))*255 - min );
-        pnm_set_component(imageimd,i,j,channel,
-          (pnm_get_component(imageimd,i,j,channel)/(max-min))*255 - min);
-      }
-    }
-  }
+    for(int i=0;i<rows_imt;i++)
+        for(int j=0;j<cols_imt;j++){
+            int swatch_row;
+            int swatch_col;
+            select_best_swatch(random_swatches,neighborhood_source,neighborhood_target[i][j],&swatch_row,&swatch_col);
+            for(int channel=1;channel<3;channel++){
+                lalphabeta_target[i][j][channel]=lalphabeta_source[swatch_row][swatch_col][channel];
+            }
+        }
 }
+
 
 void
 process(char *ims, char *imt, char* imd){
@@ -179,20 +176,22 @@ process(char *ims, char *imt, char* imd){
   int cols_imt = pnm_get_width(imageimt);
   int rows_imt = pnm_get_height(imageimt);
   pnm imageimd = pnm_new(cols_imt, rows_imt, PnmRawPpm);
-
-
-
+  
+  
+  
   double*** lalphabeta_source=malloc_3dim_array(rows,cols,3);
   double*** lalphabeta_target=malloc_3dim_array(rows_imt,cols_imt,3);
+  double*** neighborhood_source = malloc_3dim_array(rows,cols,2);
+  double*** neighborhood_target = malloc_3dim_array(rows_imt,cols_imt,2);
 
   image_to_lalphabeta_data_points(imageims,lalphabeta_source);
   image_to_lalphabeta_data_points(imageimt,lalphabeta_target);
-
-
-  apply_color_transfer(lalphabeta_target,rows_imt,cols_imt,lalphabeta_source,rows,cols);
-
+  printf("Preprocessing neighborhood\n");
+  neighborhood_preprocessing(lalphabeta_source,neighborhood_source,rows,cols);
+  neighborhood_preprocessing(lalphabeta_target,neighborhood_target,rows_imt,cols_imt);
+  printf("Applying colorization\n");
+  apply_colorization(lalphabeta_source,neighborhood_source,rows,cols, lalphabeta_target,neighborhood_target,rows_imt,cols_imt);
   lalphabeta_data_points_to_image(imageimd,lalphabeta_target);
-  stretch(imageimd,rows_imt,cols_imt);
   pnm_save(imageimd,PnmRawPpm,imd);
 
 }

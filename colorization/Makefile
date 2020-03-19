@@ -1,16 +1,14 @@
 ROOT=../bcl
 
 CPPFLAGS = -I$(ROOT)/include -I.
-CFLAGS   = -Wall -Wextra -pedantic -std=c99 #-Werror 
+CFLAGS   = -Wall -Wextra -pedantic -std=c99 -Werror 
 LDFLAGS  = -L$(ROOT)/lib
 LDLIBS   = -lbcl -lm -lfftw3
 
-BIN=copy padding filter
+BIN=colorization
 
 .PHONY: all
 all: $(BIN)
-
-padding: fft.o
 
 .PHONY: clean cleanall
 clean:
