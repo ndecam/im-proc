@@ -109,60 +109,92 @@ int** malloc_2dim_array(int x,int y){
 
 void neighborhood_preprocessing(double*** lalphabeta_data_points, double*** luminance_mean_sd, int rows, int cols){
     int patch_size = 5;
-    for(int i=0;i<rows;i++)
-        for(int j=0;j<cols;j++)
-            for(int patched_i=i-(patch_size/2);patched_i<i+(patch_size/2+1);patched_i++)
-                for(int patched_j=j-(patch_size/2);patched_j<j+(patch_size/2+1);patched_j++)
-                    if(patched_i>0 && patched_i<rows && patched_j>0 && patched_j<cols)
-                        luminance_mean_sd[i][j][0]+=(lalphabeta_data_points[patched_i][patched_j][0]/(patch_size*patch_size));
-                
+    double max_mean;
+    double max_sd;
+    double min_mean;
+    double min_sd;
 
-    
     for(int i=0;i<rows;i++)
         for(int j=0;j<cols;j++){
+          int samples = 0;
+          for(int patched_i=i-(patch_size/2);patched_i<i+(patch_size/2+1);patched_i++)
+              for(int patched_j=j-(patch_size/2);patched_j<j+(patch_size/2+1);patched_j++)
+                  if(patched_i>0 && patched_i<rows && patched_j>0 && patched_j<cols){
+                      luminance_mean_sd[i][j][0]+=(lalphabeta_data_points[patched_i][patched_j][0]);
+                      samples+=1;
+                  }
+          luminance_mean_sd[i][j][0]/=(samples);
+          if(luminance_mean_sd[i][j][0]>max_mean) max_mean = luminance_mean_sd[i][j][0];
+          if(luminance_mean_sd[i][j][0]<min_mean) min_mean = luminance_mean_sd[i][j][0];
+        }
+                
+    for(int i=0;i<rows;i++)
+        for(int j=0;j<cols;j++){
+            int samples = 0;
             for(int patched_i=i-(patch_size/2);patched_i<i+(patch_size/2+1);patched_i++)
                 for(int patched_j=j-(patch_size/2);patched_j<j+(patch_size/2+1);patched_j++)
-                    if(patched_i>0 && patched_i<rows && patched_j>0 && patched_j<cols)
+                    if(patched_i>0 && patched_i<rows && patched_j>0 && patched_j<cols){
                         luminance_mean_sd[i][j][1] += pow(lalphabeta_data_points[patched_i][patched_j][0] - luminance_mean_sd[i][j][0], 2);
-        luminance_mean_sd[i][j][1]/=(double)(patch_size*patch_size);
-        luminance_mean_sd[i][j][1] = sqrt(luminance_mean_sd[i][j][1]);
+                        samples+=1;
+                    }
+          luminance_mean_sd[i][j][1]/=(samples);
+          luminance_mean_sd[i][j][1] = sqrt(luminance_mean_sd[i][j][1]);
+          if(luminance_mean_sd[i][j][1]>max_sd) max_sd = luminance_mean_sd[i][j][1];
+          if(luminance_mean_sd[i][j][0]<min_sd) min_sd = luminance_mean_sd[i][j][1];
+
+        }
+    for(int i=0;i<rows;i++)
+        for(int j=0;j<cols;j++){
+          luminance_mean_sd[i][j][0]-=min_mean;
+          luminance_mean_sd[i][j][0]/=max_mean;
+          luminance_mean_sd[i][j][1]-=min_sd;
+          luminance_mean_sd[i][j][1]/=max_sd;
         }
     
 }
-void select_best_swatch(int** random_swatches,double*** neighborhood_source, double* neighborhood_target,int* swatch_row,int* swatch_col){
+void select_best_swatch(int** random_swatches,double*** neighborhood_source, double* neighborhood_target,int* swatch_row,int* swatch_col,double ltarget,double*** lalphabeta_source){
     
-    double best_result = (neighborhood_target[0]-neighborhood_source[0][0][0])+(neighborhood_target[1]-neighborhood_source[0][0][1]);
-    for(int swatch=0;swatch<200;swatch++){
+    double best_result = fabs((neighborhood_target[0]-neighborhood_source[random_swatches[0][0]][random_swatches[0][1]][0]))+fabs((neighborhood_target[1]-neighborhood_source[random_swatches[0][0]][random_swatches[0][1]][1]));
+    *swatch_row=random_swatches[0][0];
+    *swatch_col=random_swatches[0][1];
+    for(int swatch=1;swatch<200;swatch++){
         int swatch_row_t = random_swatches[swatch][0];
         int swatch_col_t = random_swatches[swatch][1];
-        int neighborhood_comparison = (neighborhood_target[0]-neighborhood_source[swatch_row_t][swatch_col_t][0])+(neighborhood_target[1]-neighborhood_source[swatch_row_t][swatch_col_t][1]);
+        //printf("B : %f \n",best_result);
+        double wa_source = lalphabeta_source[swatch_row_t][swatch_col_t][0] + neighborhood_source[swatch_row_t][swatch_col_t][1];
+        double wa_target = ltarget + neighborhood_target[1];
+        double neighborhood_comparison = fabs(wa_source - wa_target);
+        //printf("%f %f %f %f\n",neighborhood_target[0],neighborhood_source[swatch_row_t][swatch_col_t][0],neighborhood_target[1],neighborhood_source[swatch_row_t][swatch_col_t][1]);
+        //printf("N  : %f \n",neighborhood_comparison);
         if(   neighborhood_comparison < best_result){
             *swatch_row=swatch_row_t;
             *swatch_col=swatch_col_t;
             best_result = neighborhood_comparison;
         }
+        //printf("Test3\n");
     }
+    //printf("Best swatch selected!\n");
 }
 
 void 
 apply_colorization(double*** lalphabeta_source,double*** neighborhood_source,int rows,int cols, double*** lalphabeta_target,double*** neighborhood_target,int rows_imt,int cols_imt){
+    printf("%f\n",lalphabeta_source[0][0][0]);
     int** random_swatches = malloc_2dim_array(200,2) ;
     for(int swatch = 0;swatch<200;swatch++){
         int row = rand()%rows;
         int col = rand()%cols;
         random_swatches[swatch][0] = row;
         random_swatches[swatch][1] = col;
-        printf("%d %d\n",row,col);
     }
 
     for(int i=0;i<rows_imt;i++)
         for(int j=0;j<cols_imt;j++){
             int swatch_row;
             int swatch_col;
-            select_best_swatch(random_swatches,neighborhood_source,neighborhood_target[i][j],&swatch_row,&swatch_col);
-            for(int channel=1;channel<3;channel++){
+            select_best_swatch(random_swatches,neighborhood_source,neighborhood_target[i][j],&swatch_row,&swatch_col,lalphabeta_target[i][j][0],lalphabeta_source);
+            for(int channel=1;channel<3;channel++)
                 lalphabeta_target[i][j][channel]=lalphabeta_source[swatch_row][swatch_col][channel];
-            }
+            
         }
 }
 
